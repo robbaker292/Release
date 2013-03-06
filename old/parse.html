@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<script type="text/javascript" src="d3.v2.js"></script>
+		<style type="text/css">
+			.border {
+				fill: none;
+				stroke-width: 2px;
+				stroke: rgba(0,0,0,0.5);
+			}
+			
+			svg circle, ellipse {
+				//stroke: none;
+				stroke-width: 2px;
+				fill: none;
+			}
+			
+		</style>
+	</head>
+	<body>
+		<script type="text/javascript">
+			function Time(time) {
+				this.time = time;
+				queues = new Array();
+				activities = new Array();
+			}
+					
+			function Queue(id, order) {
+				this.id = id;
+				this.order = order;
+				usage = 0;
+			}
+			
+			function Process(a,b,c) {
+				this.a = a;
+				this.b = b;
+				this.c = c;
+				queues = new Array();
+			}
+
+			function Activity(process, queue){
+				this.process = process;
+				this.queue = queue;
+			}
+			
+			
+			times = [];
+			/*
+			*	Parse the queue lengths
+			*/
+			function parse(){
+				// create all the timing blocks
+				var data = output[output.length-1].split("  ");
+				iterations = Math.floor(parseFloat(data[0])*1000);
+				//console.log(iterations);
+				for(i = 0; i <= iterations; i++){
+					times.push(new Time(i));
+				}
+				console.log(times);
+				for (i = 0; i < output.length; i++){
+				//for (i = 0; i < 2; i++){
+					var data = output[i].split("  ");
+					
+					time = Math.floor(parseFloat(data[0])*1000); //floor() is acceptable as time will always be positive
+					//t = times[0]; // needs number
+					t = getTime(time);
+					//t = new Time(time);
+					//times.push(t);
+					//t.queues = new Array();
+					console.log(t);
+					for (j = 1; j < data.length-1; j++){
+						q = new Queue(j,j);
+						q.usage = data[j];
+						t.queues.push(q);
+					}
+				}
+			}
+			
+			
+			function getTime(time){
+				console.log(times);
+				for (i = 0; i < times.length; i++){
+					if (times[i].time = time){
+						console.log(times[i].time);
+						return times[i].time;
+					}
+				}
+				return null;
+			}
+			
+			/*
+			*	Parse the queue lengths
+			*/
+			function parseMigration(output){
+				//for (i = 0; i < output.length; i++){
+				i = 0;
+					var elements = output[i].split(",");
+					console.log(elements);
+				//}
+			}
+			
+			var intervalObj;
+			var intervalCounter = 0;
+			var txtFile = new XMLHttpRequest();
+			txtFile.open("GET", "sample_run_queues.txt", true);
+			txtFile.onreadystatechange = function() {
+				if (txtFile.readyState === 4) {  
+					if (txtFile.status === 200) {  
+						output = txtFile.responseText.split("\n"); 
+						//console.log("anon function");
+						parse();	
+						
+					}
+				}
+			};
+			txtFile.send(null);
+			var jsonFile = new XMLHttpRequest();
+			jsonFile.open("GET", "rq_migration_by_time.txt", true);
+			jsonFile.onreadystatechange = function() {
+				if (jsonFile.readyState === 4) {  
+					if (jsonFile.status === 200) {  
+						output = jsonFile.responseText.split("\n"); 
+						parseMigration(output);
+						
+					}
+				}
+			};
+			
+			animate(intervalCounter,100);
+			
+			jsonFile.send(null);
+			
+			/*
+			* Stops the animation
+			*/
+			function stop() {
+				clearInterval(intervalObj);
+			}
+			
+			/*
+			* Continues the animation from where it was left off
+			*/
+			function continueAnimation() {
+				animate(intervalCounter, 100);
+			}
+			
+			/*
+			* Animate the display from a given start point
+			*/
+			function animate(intervalCounter, timeGap){
+				
+				intervalObj = window.setInterval(function() {	
+//console.log(times);				
+						if (intervalCounter >= times.length){
+							stop();
+						} else {
+							draw(intervalCounter); 
+							intervalCounter++;
+						}
+					}
+					, timeGap);
+			}
+			
+			/*
+			* Returns the angle for a given queue - in radians
+			*/
+			function calculateAngle(itemNum, totalItems){
+				return itemNum * ((2 * Math.PI) / totalItems);
+			}
+			
+			/*
+			* Calculates the X cooridnate for a point on the circle 
+			*/
+			function calcXValue(cx, rx, ry, order, length, boxSize){
+				//return cx + (rx * Math.cos(id * ((2 * Math.PI) / length))) ; //circle
+				
+				//d = id * ((2 * Math.PI) / length);
+				d = calculateAngle(order, length);
+				if ((d < (Math.PI / 2)) ||  (d > (3 *Math.PI / 2 ))){
+					m = 1;
+				} else {
+					m = -1;
+				}
+				//console.log(d, m, rx, ry, cx);
+				return (( m * rx * ry ) / Math.sqrt( (rx * rx * Math.tan(d) *  Math.tan(d)) + (ry * ry) )) + cx - (boxSize/2)
+			}
+						
+			/*
+			* Calculates the Y cooridnate for a point on the circle 
+			*/			
+			function calcYValue(cy, rx, ry, order, length, boxSize){
+				//return cy + (ry * Math.sin(id * ((2 * Math.PI) / length))) - (boxSize/2); //circle
+				
+				//d = id * ((2 * Math.PI) / length);
+				d = calculateAngle(order, length);
+				//console.log(id, d);
+				if ((d > Math.PI/2) && (d <= (3*Math.PI)/2 ) ){
+					m = 1;
+				} else {
+					m = -1;
+				}
+				
+				return (( m * rx * ry * Math.tan(d) ) / Math.sqrt( (rx * rx * Math.tan(d) *  Math.tan(d)) + (ry * ry) )) + cy - (boxSize/2)
+			}
+			
+			/*
+			* Calculates the height of a queue box
+			*/
+			function calcHeight(usage){
+				if (usage == 0) {
+					return 5;
+				} else {
+					return (7.5*Math.log(parseInt(usage)))+5;
+				}
+			}
+			
+			function draw(timeInstance) {
+			
+				//console.log(timeInstance);
+				
+				var cx = 500;
+				var cy = 330;
+				var rx = 400;
+				var ry = 300;
+				var boxSize = 40;
+		
+				dataset = times[timeInstance].queues;
+				
+				d3.select("svg").remove();
+			
+				var svg = d3.select("body")
+					.append("svg")
+					.attr("width", 1000)
+					.attr("height", 680)
+					.attr("xmlns","http://www.w3.org/2000/svg")
+					.attr("version","1.1");
+
+				
+				svg.append("ellipse")
+					.attr("cx",cx)
+					.attr("cy",cy)
+					.attr("rx",rx)
+					.attr("ry",ry)
+					.attr("stroke","black")
+					.attr("fill","none");
+				
+
+				/**
+				svg.append("circle")
+					.attr("cx",cx)
+					.attr("cy",cy)
+					.attr("r",ry);					
+			**/
+			
+				var gEnter = svg.selectAll("g")
+					.data(dataset)
+					.enter()
+					.append("g");
+					
+				gEnter.append("rect")
+					.attr("width",boxSize)
+					.attr("height",function(d) {
+						return calcHeight(d.usage);
+					})
+					.attr("x", function(d) {
+						return calcXValue(cx, rx, ry, d.order, dataset.length, boxSize);
+						
+					})
+					.attr("y", function(d) {
+					
+						return calcYValue(cy, rx, ry, d.order, dataset.length, boxSize) - calcHeight(d.usage) + boxSize; //if circle
+			
+					})
+					.attr("id",function(d) {
+						return "num"+d.id;
+					})
+					.attr("fill",function(d){
+						var red = (d.usage * 25);
+						if (red > 255) {
+							red = 255;
+						}
+						var green = 255-(d.usage * 25);
+						if (green < 0) {
+							green = 0;
+						}
+						return d3.rgb(red,green,0);
+						//return "#" + red.toString(16) + "" + green.toString(16) + "00";
+					})
+					.attr("transform",function(d){
+						//return "rotate(" + calculateAngle(d.order,dataset.length) +  ")";
+						
+						return "rotate(" + (90 - ((180/Math.PI)*calculateAngle(d.order,dataset.length)) ) + "," + (calcXValue(cx, rx, ry, d.order, dataset.length, boxSize)+(boxSize/2)) + "," + (calcYValue(cy, rx, ry, d.order, dataset.length, boxSize)+(boxSize/2)) + ")";
+					});
+				
+				//border rectangle
+				gEnter.append("rect")
+					.attr("width",boxSize)
+					.attr("height",boxSize)
+					.attr("x", function(d) {
+						return calcXValue(cx, rx, ry, d.order, dataset.length, boxSize);
+						
+					})
+					.attr("y", function(d) {
+						return calcYValue(cy, rx, ry, d.order, dataset.length, boxSize); //if circle
+			
+					})
+					.attr("class","border")					
+					.attr("transform",function(d){
+						//return "rotate(" + calculateAngle(d.order,dataset.length) +  ")";
+						return "rotate(" + (90 - ((180/Math.PI)*calculateAngle(d.order,dataset.length)) ) + "," + (calcXValue(cx, rx, ry, d.order, dataset.length, boxSize)+(boxSize/2)) + "," + (calcYValue(cy, rx, ry, d.order, dataset.length, boxSize)+(boxSize/2)) + ")";
+					});
+					
+					//#8888FF
+					
+				gEnter.append("text")
+					.text(function (d) {
+						return "id: " + d.id + " u: " +d.usage + " a: " + parseInt(90 - ((180/Math.PI)/calculateAngle(d.order,dataset.length)) ) ;
+					})
+					.attr("x", function(d) {
+						return calcXValue(cx, rx, ry, d.order, dataset.length, 0);
+					})
+					.attr("y", function(d) {
+						return calcYValue(cy, rx, ry, d.order, dataset.length, 0);
+					})
+					.attr("width",40)
+					.attr("height",40)
+					.attr("text-anchor", "middle");
+					
+					
+				svg.append("text")
+					.text(function() {
+						return "i: " + timeInstance;
+					})
+					.attr("x", 20)
+					.attr("y", 20);
+					
+				svg.append("text")
+					.text(function() {
+						return "time: " + times[timeInstance].time + "s";
+					})
+					.attr("x", 20)
+					.attr("y", 40);
+			}
+		</script>
+	</body>
+<html>
