@@ -64,3 +64,15 @@ svg line, svg path {
 	/*//width: 1000px;
 	//height: 650px;*/
 }
+
+.nodeCrossing {
+	stroke: blue;
+}
+
+.coreCrossing {
+	stroke: #888888;
+}
+
+.sameCore {
+	stroke: green;
+}

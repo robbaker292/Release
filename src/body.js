@@ -9,6 +9,7 @@ function Queue(id, order) {
 	this.order = order;
 	usage = 0;
 	takenSpots = new Array();
+	sharedNodes = new Array();
 }
 
 function Process(a,b,c) {
@@ -25,12 +26,14 @@ function Activity(process, queue){
 	thisGap = 0;
 }
 
-var resolution = 1000; //the number of divisions of a second to make each iteration. e.g. 100 = 100th or 0.01s
+var resolution = 1000; //the number of divisions of a second to make each iteration. e.g. 1000 = 1000th or 0.001s
 var intervalTimer = 200; //number of milliseconds between each iteration on display
 
 //order of the queues on the screen
 var order = [1,13,3,15,5,17,7,19,9,21,11,23,0,12,2,14,4,16,6,18,8,20,10,22];
+//var order = [1,2,3,4,5,6,7,8,9,10,11,12];
 var nodeGroupings = [[1,13],[3,15],[5,17],[7,19],[9,21],[11,23],[0,12],[2,14],[4,16],[6,18],[8,20],[10,22]]
+//var nodeGroupings = [[1,7],[2,8],[3,9],[4,10],[5,11],[6,12]];
 
 var times = [];
 var processes = [];
@@ -120,6 +123,14 @@ function findOrder(id){
 }
 
 /*
+* Performs a logical exclsuive OR
+*/
+function XOR(a, b){
+	return ( a || b ) && !( a && b );
+}
+
+
+/*
 *	Parse the queue lengths
 */
 function parseMigration(output){
@@ -155,18 +166,43 @@ function parseMigration(output){
 	}
 }
 
+function buildSharedNodes(queues){
+	for (i = 0; i < nodeGroupings.length; i++){
+		var sharedNodes = nodeGroupings[i];
+		for (j = 0; j < sharedNodes.length; j++){
+			var q = getQueue(queues, sharedNodes[j]);
+			//q.sharedNodes = removeFromArray(sharedNodes,sharedNodes[j]);
+			q.sharedNodes = sharedNodes;
+			//console.log(q);
+		}
+		//console.log(sharedNodes);
+	}
+
+}
+
+/**
+*	Removes the given value from the given array
+*/
+function removeFromArray(arr, value){
+	console.log(arr, value);
+	var index = arr.indexOf(value);
+	if (index != undefined){
+		arr.splice(index,1);
+		return arr;
+	}
+	return arr;
+}
+
 /*
 * Read the files in and parse them
 */
-
-
-
 
 
 var intervalObj;
 var intervalCounter = 0;
 var txtFile = new XMLHttpRequest();
 txtFile.open("GET", "sample_run_queues.txt", true);
+//txtFile.open("GET", "runQtest.txt", true);
 txtFile.onreadystatechange = function() {
 	if (txtFile.readyState != 4) {
 		window.status="Loading";
@@ -362,6 +398,7 @@ function prepareDrawing() {
 }
 
 function draw(timeInstance) {
+
 	intervalCounter = timeInstance;
 	//if it hasn't loaded the svg elements yet, then prepare the drawing again
 	if (d3.select("svg").empty()){
@@ -391,6 +428,8 @@ function draw(timeInstance) {
 	//console.log(dataset);
 	//clears the svg before drawing the next batch
 	//d3.select("svg").remove();
+
+	buildSharedNodes(dataset);
 
 	d3.selectAll("g").remove();
 	d3.selectAll("ellipse").remove();
@@ -647,9 +686,11 @@ function draw(timeInstance) {
 					var fromY = parseInt(svg.select("#border"+from).attr("y")) + (boxSize/2);
 					var toX = parseInt(svg.select("#border"+to).attr("x")) + (boxSize/2);
 					var toY = parseInt(svg.select("#border"+to).attr("y")) + (boxSize/2);
+
 					var centrePoint = Math.abs(getQueue(dataset,from).order - getQueue(dataset,to).order);
-					var centreX = calcXValue(cx, rx*0.25, ry*0.25, centrePoint, dataset.length, boxSize);
-					var centreY = calcYValue(cy, rx*0.25, ry*0.25, centrePoint, dataset.length, boxSize);
+					centrePoint = (centrePoint/2) + getQueue(dataset,from).order;
+					var centreX = calcXValue(cx, rx*0.75, ry*0.75, centrePoint, dataset.length, boxSize);
+					var centreY = calcYValue(cy, rx*0.75, ry*0.75, centrePoint, dataset.length, boxSize);
 					
 					pathData = [{x:fromX, y:fromY},{x:centreX, y:centreY},{x:toX, y:toY}];
 					
@@ -663,6 +704,24 @@ function draw(timeInstance) {
 					
 					svg.append("svg:path")
 						.attr("d", line(pathData))
+						.attr("class",function (d) {
+							fromCrossing = findOrder(from) >= (dataset.length /2);
+							toCrossing = findOrder(to) >= (dataset.length /2);
+							//console.log(findOrder(from), findOrder(to), fromCrossing, toCrossing );
+							//console.log(from, to, getQueue(dataset, from).sharedNodes, getQueue(dataset, from).sharedNodes.indexOf(to));
+
+							//if the process moves across the node
+							if ( XOR(fromCrossing, toCrossing)){
+								//console.log("nodeCrossing");
+								return "nodeCrossing";
+							//if the process moves to the same core
+							} else if ( getQueue(dataset, from).sharedNodes.indexOf(to) != -1 )
+							{
+								return "sameCore";
+							} else {
+								return "coreCrossing";
+							}
+						})
 						.style("opacity", 1)
 						.transition()
 						.duration(1500)
