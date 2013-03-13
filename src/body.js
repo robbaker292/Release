@@ -688,7 +688,12 @@ function draw(timeInstance) {
 					var toY = parseInt(svg.select("#border"+to).attr("y")) + (boxSize/2);
 
 					var centrePoint = Math.abs(getQueue(dataset,from).order - getQueue(dataset,to).order);
-					centrePoint = (centrePoint/2) + getQueue(dataset,from).order;
+					if (getQueue(dataset,from).order < getQueue(dataset,to).order){
+						centrePoint = (centrePoint/2) + getQueue(dataset,from).order;
+					} else {
+						centrePoint = (centrePoint/2) + getQueue(dataset,to).order;
+					}
+					
 					var centreX = calcXValue(cx, rx*0.75, ry*0.75, centrePoint, dataset.length, boxSize);
 					var centreY = calcYValue(cy, rx*0.75, ry*0.75, centrePoint, dataset.length, boxSize);
 					
