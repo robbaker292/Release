@@ -29,11 +29,21 @@ function Activity(process, queue){
 var resolution = 1000; //the number of divisions of a second to make each iteration. e.g. 1000 = 1000th or 0.001s
 var intervalTimer = 200; //number of milliseconds between each iteration on display
 
+var testing = false;
+
 //order of the queues on the screen
-var order = [1,13,3,15,5,17,7,19,9,21,11,23,0,12,2,14,4,16,6,18,8,20,10,22];
-//var order = [1,2,3,4,5,6,7,8,9,10,11,12];
-var nodeGroupings = [[1,13],[3,15],[5,17],[7,19],[9,21],[11,23],[0,12],[2,14],[4,16],[6,18],[8,20],[10,22]]
-//var nodeGroupings = [[1,7],[2,8],[3,9],[4,10],[5,11],[6,12]];
+
+if (testing){
+	var order = [1,13,3,15,5,17,7,19,9,21,11,23,0,12,2,14,4,16,6,18,8,20,10,22, 25, 24, 26, 27];
+	var nodeGroupings = [[1,13],[3,15],[5,17],[7,19],[9,21],[11,23],[0,12],[2,14],[4,16],[6,18],[8,20],[10,22],[24,25], [26,27]];
+	//var nodes = [[1,12],[27,15]];
+	var nodes = [[12,1],[15,27]];
+} else {
+	var order = [1,13,3,15,5,17,7,19,9,21,11,23,0,12,2,14,4,16,6,18,8,20,10,22];
+	var nodeGroupings = [[1,13],[3,15],[5,17],[7,19],[9,21],[11,23],[0,12],[2,14],[4,16],[6,18],[8,20],[10,22]];
+	var nodes = [[12,10],[13,11]];
+}
+
 
 var times = [];
 var processes = [];
@@ -122,6 +132,10 @@ function findOrder(id){
 	return -1;
 }
 
+function getQueueFromOrder(orderID){
+	return order[orderID];
+}
+
 /*
 * Performs a logical exclsuive OR
 */
@@ -201,8 +215,13 @@ function removeFromArray(arr, value){
 var intervalObj;
 var intervalCounter = 0;
 var txtFile = new XMLHttpRequest();
-txtFile.open("GET", "sample_run_queues.txt", true);
-//txtFile.open("GET", "runQtest.txt", true);
+
+if (testing){
+	txtFile.open("GET", "runQtest.txt", true);
+} else {
+	txtFile.open("GET", "sample_run_queues.txt", true);
+}
+
 txtFile.onreadystatechange = function() {
 	if (txtFile.readyState != 4) {
 		window.status="Loading";
@@ -298,7 +317,7 @@ function animate(intervalCount, timeGap){
 * Returns the angle for a given queue - in radians
 */
 function calculateAngle(itemNum, totalItems){
-	return (itemNum * ((2 * Math.PI) / totalItems))+0.13;
+	return (itemNum * ((2 * Math.PI) / totalItems)) + (Math.PI / dataset.length); //+0.13
 }
 
 /*
@@ -431,6 +450,8 @@ function draw(timeInstance) {
 
 	buildSharedNodes(dataset);
 
+	document.getElementsByTagName("html")[0].style.fontSize = (2500 / dataset.length) + "%";
+
 	d3.selectAll("g").remove();
 	d3.selectAll("ellipse").remove();
 	d3.selectAll("#its").remove();
@@ -455,7 +476,7 @@ function draw(timeInstance) {
 		.enter()
 		.append("g");
 	
-	/*
+	/* 
 	*	process id labels
 	*/
 	gEnter.append("text")
@@ -504,8 +525,8 @@ function draw(timeInstance) {
 			return parseInt(((firstY - secondY)/2)+parseFloat(secondY))+"";
 			//return calcYValue(cy, rx, ry, d[0], dataset.length, boxSize);
 		})
-		.attr("rx",40)
-		.attr("ry",20)
+		.attr("rx",1.6*dataset.length)
+		.attr("ry",0.8*dataset.length)
 		.attr("class","grouping")
 		.attr("id",function(d) {
 			return d[0] + " " + d[1];
@@ -515,11 +536,14 @@ function draw(timeInstance) {
 			var firstAngle = parseInt(90 - ((180/Math.PI)*calculateAngle(findOrder(d[0]),dataset.length)) );
 			var secondAngle = parseInt(90 - ((180/Math.PI)*calculateAngle(findOrder(d[1]),dataset.length)) );
 			//console.log("id"+d[0], "order"+findOrder(d[0]), firstAngle, "id"+d[1], "order"+findOrder(d[1]), secondAngle, (firstAngle-secondAngle)/2, ((firstAngle - secondAngle)/2)+secondAngle);
-			var angle = ((firstAngle - secondAngle)/2)+secondAngle
+			var angle = ((firstAngle - secondAngle)/2)+secondAngle;
 			//var angle = secondAngle;
 			
 			var centreX = ((d3.select("#label"+d[0]).attr("x") - d3.select("#label"+d[1]).attr("x"))/2)+parseFloat(d3.select("#label"+d[1]).attr("x"));
 			var centreY = ((d3.select("#label"+d[0]).attr("y") - d3.select("#label"+d[1]).attr("y"))/2)+parseFloat(d3.select("#label"+d[1]).attr("y"));
+
+			console.log(d[0], d[1], angle);
+
 			return "rotate(" + angle + "," + parseInt(centreX) + "," + parseInt(centreY) + ")";
 		});	
 		
@@ -529,11 +553,15 @@ function draw(timeInstance) {
 	svg.append("svg:path")
 		.attr("d",function(d) {
 			
-			var startX = parseInt(d3.select("#label12").attr("x"))+xAdjust;
-			var startY = parseInt(d3.select("#label12").attr("y"))+yAdjust;
+			//var startValue = dataset.length/2;
+			//console.log(nodes[0][0], nodes[0][1], nodes[1][0], nodes[1][1]);
+			//console.log(startValue-2, getQueueFromOrder(startValue-2),  order[startValue-2]);
+
+			var startX = parseInt(d3.select("#label"+nodes[0][0]).attr("x"))+xAdjust; //12
+			var startY = parseInt(d3.select("#label"+nodes[0][0]).attr("y"))+yAdjust;
 			
-			var endX = parseInt(d3.select("#label10").attr("x"))-xAdjust;
-			var endY = parseInt(d3.select("#label10").attr("y"))+yAdjust;
+			var endX = parseInt(d3.select("#label"+nodes[0][1]).attr("x"))-xAdjust; //10
+			var endY = parseInt(d3.select("#label"+nodes[0][1]).attr("y"))+yAdjust;
 			
 			return "M" + startX + " " + startY + " A " + (rx) + "," + (ry) + " 0 1,0 " + endX + "," + endY + " z";
 			
@@ -544,11 +572,13 @@ function draw(timeInstance) {
 	svg.append("svg:path")
 		.attr("d",function(d) {
 			
-			var startX = parseInt(d3.select("#label13").attr("x"))-xAdjust;
-			var startY = parseInt(d3.select("#label13").attr("y"))-yAdjust;
+			//var startValue = (dataset.length/2)+1;
+
+			var startX = parseInt(d3.select("#label"+nodes[1][0]).attr("x"))-xAdjust; //13
+			var startY = parseInt(d3.select("#label"+nodes[1][0]).attr("y"))-yAdjust;
 			
-			var endX = parseInt(d3.select("#label11").attr("x"))+xAdjust;
-			var endY = parseInt(d3.select("#label11").attr("y"))-yAdjust;
+			var endX = parseInt(d3.select("#label"+nodes[1][1]).attr("x"))+xAdjust; //11
+			var endY = parseInt(d3.select("#label"+nodes[1][1]).attr("y"))-yAdjust;
 			
 			return "M" + startX + " " + startY + " A " + (rx) + "," + (ry) + " 0 1,0 " + endX + "," + endY + " z";
 			
