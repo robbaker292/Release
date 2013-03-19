@@ -29,19 +29,20 @@ function Activity(process, queue){
 var resolution = 1000; //the number of divisions of a second to make each iteration. e.g. 1000 = 1000th or 0.001s
 var intervalTimer = 200; //number of milliseconds between each iteration on display
 
-var testing = false;
+var testing = true;
 
 //order of the queues on the screen
 
 if (testing){
-	var order = [1,13,3,15,5,17,7,19,9,21,11,23,0,12,2,14,4,16,6,18,8,20,10,22, 25, 24, 26, 27];
-	var nodeGroupings = [[1,13],[3,15],[5,17],[7,19],[9,21],[11,23],[0,12],[2,14],[4,16],[6,18],[8,20],[10,22],[24,25], [26,27]];
-	//var nodes = [[1,12],[27,15]];
-	var nodes = [[12,1],[15,27]];
+	//var order = [1,13,3,15,5,17,7,19,9,21,11,23,26,27,0,12,2,14,4,16,6,18,8,20,10,22,25,24];
+	//var nodeGroupings = [[1,13],[3,15],[5,17],[7,19],[9,21],[11,23],[26,27],[0,12],[2,14],[4,16],[6,18],[8,20],[10,22],[24,25]];
+
+	var order = [1,13,3,15,5,17,7,19,9,21,11,23,26,0,12,2,14,4,16,6,18,8,20,10,22,25,24]; //list of queueIDs.
+	var nodeGroupings = [[1,13],[3,15],[5,17],[7,19],[9,21],[11,23,26],[0,12],[2,14],[4,16],[6,18],[8,20],[10,22],[24,25]];
 } else {
 	var order = [1,13,3,15,5,17,7,19,9,21,11,23,0,12,2,14,4,16,6,18,8,20,10,22];
 	var nodeGroupings = [[1,13],[3,15],[5,17],[7,19],[9,21],[11,23],[0,12],[2,14],[4,16],[6,18],[8,20],[10,22]];
-	var nodes = [[12,10],[13,11]];
+
 }
 
 
@@ -72,7 +73,7 @@ function parse(output){
 		//times.push(t);
 		t.queues = new Array();
 		for (var j = 1; j < data.length-1; j++){
-			q = new Queue(j-1,order[j-1]);
+			q = new Queue(j-1,findOrder(j-1));
 			q.usage = data[j];
 			q.takenSpots = new Array();
 			t.queues.push(q);
@@ -309,15 +310,14 @@ function animate(intervalCount, timeGap){
 				draw(intervalCounter); 
 				intervalCounter++;
 			}
-		}
-		, timeGap);
+		}, timeGap);
 }
 
 /*
 * Returns the angle for a given queue - in radians
 */
 function calculateAngle(itemNum, totalItems){
-	return (itemNum * ((2 * Math.PI) / totalItems)) + (Math.PI / dataset.length); //+0.13
+	return (itemNum * ((2 * Math.PI) / totalItems)) + (Math.PI / totalItems); //+0.13
 }
 
 /*
@@ -509,24 +509,27 @@ function draw(timeInstance) {
 		.data(nodeGroupings)
 		.enter()
 		.append("ellipse")
-		.attr("cx",function (d){
+		.attr("cx",function (d) {
+			//console.log(d.length);
 			var firstX = parseInt(d3.select("#label"+d[0]).attr("x"));
-			var secondX = parseInt(d3.select("#label"+d[1]).attr("x"));
+			var secondX = parseInt(d3.select("#label"+d[d.length-1]).attr("x"));
 			//console.log("x", d[0],firstX,d[1],secondX,(firstX - secondX),((firstX - secondX)/2)+parseFloat(secondX));
 		
 			//var firstX =  calcXValue(cx, rx, ry, d[0], dataset.length, boxSize);
 			//var secondX =  calcXValue(cx, rx, ry, d[1], dataset.length, boxSize);
 			return parseInt(((firstX - secondX)/2)+parseFloat(secondX))+"";
 		})
-		.attr("cy",function(d) {
+		.attr("cy",function (d) {
 			var firstY = parseInt(d3.select("#label"+d[0]).attr("y"));
-			var secondY = parseInt(d3.select("#label"+d[1]).attr("y"));
+			var secondY = parseInt(d3.select("#label"+d[d.length-1]).attr("y"));
 			//console.log("y",d[0],firstY,d[1],secondY,(firstY - secondY),((firstY - secondY)/2)+parseFloat(secondY));
 			return parseInt(((firstY - secondY)/2)+parseFloat(secondY))+"";
 			//return calcYValue(cy, rx, ry, d[0], dataset.length, boxSize);
 		})
-		.attr("rx",1.6*dataset.length)
-		.attr("ry",0.8*dataset.length)
+		.attr("rx",function (d) {
+			return (960/dataset.length) * (d.length/2);
+		})
+		.attr("ry",480/dataset.length)
 		.attr("class","grouping")
 		.attr("id",function(d) {
 			return d[0] + " " + d[1];
@@ -534,15 +537,15 @@ function draw(timeInstance) {
 		.attr("transform",function(d){
 			//return "rotate(" + calculateAngle(d.order,dataset.length) +  ")";
 			var firstAngle = parseInt(90 - ((180/Math.PI)*calculateAngle(findOrder(d[0]),dataset.length)) );
-			var secondAngle = parseInt(90 - ((180/Math.PI)*calculateAngle(findOrder(d[1]),dataset.length)) );
+			var secondAngle = parseInt(90 - ((180/Math.PI)*calculateAngle(findOrder(d[d.length-1]),dataset.length)) );
 			//console.log("id"+d[0], "order"+findOrder(d[0]), firstAngle, "id"+d[1], "order"+findOrder(d[1]), secondAngle, (firstAngle-secondAngle)/2, ((firstAngle - secondAngle)/2)+secondAngle);
 			var angle = ((firstAngle - secondAngle)/2)+secondAngle;
 			//var angle = secondAngle;
 			
-			var centreX = ((d3.select("#label"+d[0]).attr("x") - d3.select("#label"+d[1]).attr("x"))/2)+parseFloat(d3.select("#label"+d[1]).attr("x"));
-			var centreY = ((d3.select("#label"+d[0]).attr("y") - d3.select("#label"+d[1]).attr("y"))/2)+parseFloat(d3.select("#label"+d[1]).attr("y"));
+			var centreX = ((d3.select("#label"+d[0]).attr("x") - d3.select("#label"+d[d.length-1]).attr("x"))/2)+parseFloat(d3.select("#label"+d[d.length-1]).attr("x"));
+			var centreY = ((d3.select("#label"+d[0]).attr("y") - d3.select("#label"+d[d.length-1]).attr("y"))/2)+parseFloat(d3.select("#label"+d[d.length-1]).attr("y"));
 
-			console.log(d[0], d[1], angle);
+			//console.log(d[0], d[1], angle);
 
 			return "rotate(" + angle + "," + parseInt(centreX) + "," + parseInt(centreY) + ")";
 		});	
@@ -555,13 +558,14 @@ function draw(timeInstance) {
 			
 			//var startValue = dataset.length/2;
 			//console.log(nodes[0][0], nodes[0][1], nodes[1][0], nodes[1][1]);
+			//console.log(getQueueFromOrder(0), parseInt((dataset.length/2)-1), getQueueFromOrder((dataset.length/2)-1), getQueueFromOrder((dataset.length/2)), getQueueFromOrder(dataset.length-1));
 			//console.log(startValue-2, getQueueFromOrder(startValue-2),  order[startValue-2]);
 
-			var startX = parseInt(d3.select("#label"+nodes[0][0]).attr("x"))+xAdjust; //12
-			var startY = parseInt(d3.select("#label"+nodes[0][0]).attr("y"))+yAdjust;
+			var startX = parseInt(d3.select("#label"+getQueueFromOrder(0)).attr("x"))+xAdjust; //12
+			var startY = parseInt(d3.select("#label"+getQueueFromOrder(0)).attr("y"))+yAdjust;
 			
-			var endX = parseInt(d3.select("#label"+nodes[0][1]).attr("x"))-xAdjust; //10
-			var endY = parseInt(d3.select("#label"+nodes[0][1]).attr("y"))+yAdjust;
+			var endX = parseInt(d3.select("#label"+getQueueFromOrder(parseInt(dataset.length/2)-1)).attr("x"))-xAdjust; //10
+			var endY = parseInt(d3.select("#label"+getQueueFromOrder(parseInt(dataset.length/2)-1)).attr("y"))+yAdjust;
 			
 			return "M" + startX + " " + startY + " A " + (rx) + "," + (ry) + " 0 1,0 " + endX + "," + endY + " z";
 			
@@ -574,11 +578,11 @@ function draw(timeInstance) {
 			
 			//var startValue = (dataset.length/2)+1;
 
-			var startX = parseInt(d3.select("#label"+nodes[1][0]).attr("x"))-xAdjust; //13
-			var startY = parseInt(d3.select("#label"+nodes[1][0]).attr("y"))-yAdjust;
+			var startX = parseInt(d3.select("#label"+getQueueFromOrder(parseInt(dataset.length/2))).attr("x"))-xAdjust; //13
+			var startY = parseInt(d3.select("#label"+getQueueFromOrder(parseInt(dataset.length/2))).attr("y"))-yAdjust;
 			
-			var endX = parseInt(d3.select("#label"+nodes[1][1]).attr("x"))+xAdjust; //11
-			var endY = parseInt(d3.select("#label"+nodes[1][1]).attr("y"))-yAdjust;
+			var endX = parseInt(d3.select("#label"+getQueueFromOrder(dataset.length-1)).attr("x"))+xAdjust; //11
+			var endY = parseInt(d3.select("#label"+getQueueFromOrder(dataset.length-1)).attr("y"))-yAdjust;
 			
 			return "M" + startX + " " + startY + " A " + (rx) + "," + (ry) + " 0 1,0 " + endX + "," + endY + " z";
 			
@@ -645,7 +649,7 @@ function draw(timeInstance) {
 		
 		gEnter.append("text")
 		.text(function(d){
-			return d.usage+"";
+			return d.usage+" " + d.order;
 		})
 		.attr("width",boxSize)
 		.attr("height",function(d) {
