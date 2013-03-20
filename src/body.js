@@ -38,9 +38,9 @@ if (testing){
 	//var nodeGroupings = [[1,13],[3,15],[5,17],[7,19],[9,21],[11,23],[26,27],[0,12],[2,14],[4,16],[6,18],[8,20],[10,22],[24,25]];
 
 	var order = [1,13,3,15,5,17,7,19,9,21,11,23,26,0,12,2,14,4,16,6,18,8,20,10,22,25,24]; //list of queueIDs.
-	var nodeGroupings = [[1,13],[3,15],[5,17],[7,19],[9,21],[11,23,26],[0,12],[2,14],[4,16],[6,18],[8,20],[10,22],[24,25]];
+	var nodeGroupings = [[1,13],[3,15],[5],[17,7],[19],[9,21],[11,23,26],[0,12],[2,14],[4,16],[6,18],[8,20],[10,22],[24,25]];
 } else {
-	var order = [1,13,3,15,5,17,7,19,9,21,11,23,0,12,2,14,4,16,6,18,8,20,10,22];
+	var order = [1,13,3,15,5,17,7,19,9,21,11,23,0,12,2,14,4,16,6,18,8,20,10,22]; //list of queueIDs.
 	var nodeGroupings = [[1,13],[3,15],[5,17],[7,19],[9,21],[11,23],[0,12],[2,14],[4,16],[6,18],[8,20],[10,22]];
 
 }
@@ -63,7 +63,6 @@ function parse(output){
 	}
 	//console.log(times);
 	for (var i = 0; i < output.length; i++){
-	//for (i = 0; i < 2; i++){
 		var data = output[i].split("  ");
 		
 		time = Math.floor(parseFloat(data[0])*resolution); //floor() is acceptable as time will always be positive
@@ -390,7 +389,7 @@ function findFirstGap(takenSpots) {
 function prepareDrawing() {
 	d3.select("#loading").remove();
 	
-	console.log("preparing");
+	//console.log("preparing");
 	//var svg = d3.select("#svgdiv")
 	//var svg = d3.select("div")
 	var svg = d3.select("#svgdiv")
