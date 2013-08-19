@@ -29,7 +29,7 @@ function Activity(process, queue){
 var resolution = 1000; //the number of divisions of a second to make each iteration. e.g. 1000 = 1000th or 0.001s
 var intervalTimer = 200; //number of milliseconds between each iteration on display
 
-var testing = true;
+var testing = false;
 
 //order of the queues on the screen
 
@@ -727,8 +727,11 @@ function draw(timeInstance) {
 						centrePoint = (centrePoint/2) + getQueue(dataset,to).order;
 					}
 					
-					var centreX = calcXValue(cx, rx*0.75, ry*0.75, centrePoint, dataset.length, boxSize);
-					var centreY = calcYValue(cy, rx*0.75, ry*0.75, centrePoint, dataset.length, boxSize);
+					var centreOptions = [0.2,0.4,0.6,0.8];
+					var centreValue = centreOptions[Math.floor(Math.random() * 4)];
+					//console.log(centreValue);
+					var centreX = calcXValue(cx, rx*centreValue, ry*centreValue, centrePoint, dataset.length, boxSize);
+					var centreY = calcYValue(cy, rx*centreValue, ry*centreValue, centrePoint, dataset.length, boxSize);
 					
 					pathData = [{x:fromX, y:fromY},{x:centreX, y:centreY},{x:toX, y:toY}];
 					
