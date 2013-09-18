@@ -155,6 +155,19 @@ function calcYValue(cy, rx, ry, order, length, boxSize){
 	return (( m * rx * ry * Math.tan(d) ) / Math.sqrt( (rx * rx * Math.tan(d) *  Math.tan(d)) + (ry * ry) )) + cy - (boxSize/2);
 }
 
+/**
+*	Checks whether q1 is in the same core as q2
+*/
+function sameCoreCheck(q1, q2){
+	for (var i = 0; i < nodeGroupings.length; i++){
+		var group = nodeGroupings[i];
+		//console.log(group, group.indexOf(q1), group.indexOf(q2));
+		if ( (group.indexOf(parseInt(q1)) != -1) && (group.indexOf(parseInt(q2)) != -1) ) {
+			return true;
+		}
+	}
+	return false;
+}
 
 /**
 *	-----------------------------------------------------------------------------------------------------
@@ -162,6 +175,8 @@ function calcYValue(cy, rx, ry, order, length, boxSize){
 *	Actual code
 *
 */
+
+var svg = svg = d3.select("svg");
 
 function prepareDrawing() {
 	d3.select("#loading").remove();
@@ -213,6 +228,27 @@ function prepareDrawing() {
 		.append("svg:title")
 		.text(function(d) {
 			return "Queue: "+d;
+		});
+
+//border rectangle
+	gEnter.append("rect")
+		.attr("width",boxSize)
+		.attr("height",boxSize)
+		.attr("x", function(d) {
+			return parseInt(calcXValue(cx, rx, ry, findOrder(d), order.length, boxSize));
+			
+		})
+		.attr("y", function(d) {
+			return parseInt(calcYValue(cy, rx, ry, findOrder(d), order.length, boxSize)); //if circle
+
+		})
+		.attr("id",function(d) {
+			return "border"+d;
+		})
+		.attr("class","border")					
+		.attr("transform",function(d){
+			//return "rotate(" + calculateAngle(d.order,dataset.length) +  ")";
+			return "rotate(" + (90 - ((180/Math.PI)*calculateAngle(findOrder(d),order.length)) ) + "," + parseInt(calcXValue(cx, rx, ry, findOrder(d),order.length, boxSize)+(boxSize/2)) + "," + parseInt(calcYValue(cy, rx, ry, findOrder(d), order.length, boxSize)+(boxSize/2)) + ")";
 		});
 
 	/**
@@ -363,6 +399,9 @@ function parse(input){
 		//assuming data is {queueLength, time, queueID, size}
 		//console.log("queueLength found", text[1], text[2].substring(0,text[2].length-1));
 		alterQueueSize(text[2], text[3].substring(0,text[3].length-1));
+	} else if(text[0] == "{processMigration"){
+		//assuming data is {processMigration, time, from, to, count}
+		migrateProcess(text[2], text[3], text[4].substring(0,text[4].length-1))
 	}
 	//console.log(input);
 
@@ -380,7 +419,7 @@ function alterTime(time){
 }
 
 function alterQueueSize(queueID, size){
-	console.log(queueID, size);
+	//console.log(queueID, size);
 
 	d3.select("#num"+queueID).remove();
 
@@ -428,5 +467,99 @@ function alterQueueSize(queueID, size){
 		.text(function(d) {
 			return ""+parseInt(size);
 		});
+
+	if (d3.select("#usage").property("checked")){
+		//console.log("abc");
+		
+		d3.select("#group"+queueID).append("text")
+		.text(function(d){
+			//console.log(findOrder(queueID), parseInt(findOrder(queueID))-1)
+			return size+" " + (parseInt(findOrder(queueID))-1);
+		})
+		.attr("width",boxSize)
+		.attr("height",function(d) {
+			return calcHeight(d);
+		})
+		.attr("x", function(d) {
+			return calcXValue(cx, rx+boxSize+10, ry+boxSize+10, findOrder(queueID), order.length, boxSize)+(boxSize/2)-5;
+		})
+		.attr("y", function(d) {
+			return calcYValue(cy, rx+boxSize+10, ry+boxSize+10, findOrder(queueID), order.length, boxSize)+(boxSize/2); //-
+
+		})
+		.attr("class","usage");
+		//return "abc";
+			
+	}
+
+}
+
+function migrateProcess(from, to, size){
+	console.log(from, to, size);
+
+	var svg = d3.select("svg");
+
+	//var from = d.queue;
+	//var to = d.process.queues[previousQueueID];
+	//console.log(previousQueueID, d.process.queues,from, to); //log
+	var fromX = parseInt(svg.select("#border"+from).attr("x")) + (boxSize/2);
+	var fromY = parseInt(svg.select("#border"+from).attr("y")) + (boxSize/2);
+
+	var toX = parseInt(svg.select("#border"+to).attr("x")) + (boxSize/2);
+	var toY = parseInt(svg.select("#border"+to).attr("y")) + (boxSize/2);
+	var dataset = order;
+
+	var centrePoint = Math.abs(findOrder(getQueue(dataset,from)) - findOrder(getQueue(dataset,to)));
+	if (findOrder(getQueue(dataset,from)) < findOrder(getQueue(dataset,to))){
+		centrePoint = (centrePoint/2) + findOrder(getQueue(dataset,from));
+	} else {
+		centrePoint = (centrePoint/2) + findOrder(getQueue(dataset,to));
+	}
+
+	var centreOptions = [0.2,0.4,0.6,0.8];
+	var centreValue = centreOptions[Math.floor(Math.random() * 4)];
+	//console.log(centreValue);
+	var centreX = calcXValue(cx, rx*centreValue, ry*centreValue, centrePoint, dataset.length, boxSize);
+	var centreY = calcYValue(cy, rx*centreValue, ry*centreValue, centrePoint, dataset.length, boxSize);
+
+	var pathData = [{x:fromX, y:fromY},{x:centreX, y:centreY},{x:toX, y:toY}];
+
+	var line = d3.svg.line()
+		.x(function (d) { return d.x;} )
+		.y(function (d) { return d.y;} )
+		.interpolate("cardinal")
+		.tension(0.5);
+
+	svg = d3.select("svg").append("svg:path")
+		.attr("d", line(pathData))
+		.attr("class",function (d) {
+			fromCrossing = findOrder(from) >= (dataset.length /2);
+			toCrossing = findOrder(to) >= (dataset.length /2);
+			//console.log(findOrder(from), findOrder(to), fromCrossing, toCrossing );
+			//console.log(from, to, getQueue(dataset, from).sharedNodes, getQueue(dataset, from).sharedNodes.indexOf(to));
+
+			//if the process moves across the node
+			if ( XOR(fromCrossing, toCrossing)){
+				//console.log("nodeCrossing");
+				return "nodeCrossing";
+			//if the process moves to the same core
+			} else if (sameCoreCheck(from, to))
+			{
+				return "sameCore";
+			} else {
+				return "coreCrossing";
+			}
+		})
+		.style("opacity", 1)
+		.transition()
+		.duration(1500)
+		.style("opacity", 0)
+		.transition()
+		.delay(1500)
+		.each("start", function() {
+			d3.select(this).remove(); 
+			//line.remove();
+		});
+
 
 }

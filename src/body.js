@@ -483,6 +483,7 @@ function draw(timeInstance) {
 			return d.id; // + " a:" + calculateAngle(d.order,dataset.length);
 		})
 		.attr("x", function(d) {
+			console.log(boxSize);
 			return parseInt(calcXValue(cx, rx+(boxSize/2), ry+(boxSize/2), d.order, dataset.length, 0));
 		})
 		.attr("y", function(d) {
