@@ -26,9 +26,6 @@ function Activity(process, queue){
 	thisGap = 0;
 }
 
-var resolution = 1000; //the number of divisions of a second to make each iteration. e.g. 1000 = 1000th or 0.001s
-var intervalTimer = 200; //number of milliseconds between each iteration on display
-
 var testing = false;
 
 //order of the queues on the screen
@@ -176,7 +173,7 @@ function sameCoreCheck(q1, q2){
 *
 */
 
-var svg = svg = d3.select("svg");
+var svg = d3.select("svg");
 
 function prepareDrawing() {
 	d3.select("#loading").remove();
